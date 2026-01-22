@@ -1,0 +1,87 @@
+---
+title: "702_assignment"
+author: "Sagnik Roy"
+date: "2026-01-19"
+output: word_document
+---
+
+## Predictive Analysis PS1
+
+### Question 1. 
+Report the “class” of the data set. How many rows and columns are in this data set? What do the rows and columns represent?
+
+```{r}
+library(MASS)
+class(Boston)
+dim(Boston)
+```
+
+The class of this data set is data.frame.
+
+This data set has 14 columns, each representing a different housing related variable, and 506 rows, each representing a different suburb in Boston.
+
+### Question 2.
+Create a smaller data set with the variables median value of owner-occupied homes, per capita crime rate, nitrogen oxides concentration, proportion of blacks and percentage of lower status of the population. Choosing median value of owner occupied homes as the response and the rest as the predictors, make scatter plots of the response versus each predictor. Present the scatter plots in different panels of the same graph. Comment on your findings.
+
+```{r}
+Boston_sub=Boston[,c("medv","crim","nox","black","lstat")]
+attach(Boston_sub)
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(crim,medv,xlab="crim",ylab="medv",main="Median value vs\nCrime rate",pch=20,col="mediumaquamarine")
+plot(nox,medv,xlab="nox",ylab="medv",main="Median value vs\nNitrogen oxides",pch=20,col="mediumaquamarine")
+plot(black,medv,xlab="black",ylab="medv",main="Median value vs\nProportion of blacks",pch=20,col="mediumaquamarine")
+plot(lstat,medv,xlab="lstat",ylab="medv",main="Median value vs\nLower status population",pch=20,col="mediumaquamarine")
+```
+
+```{r}
+detach(Boston_sub)
+```
+
+
+### Question 3. 
+Which suburb of Boston has lowest median value of owner-occupied homes? What are the values of the other predictors mentioned in (2), for that suburb. How do these values compare to the overall ranges for those predictors? Comment on your findings. Hint: Mention which percentile these values belong to.
+
+```{r}
+min_medv=min(Boston$medv)
+lowest_suburb=Boston[Boston$medv == min_medv,]
+lowest_suburb
+```
+We can see that the lowest value of medv (which is 5.0) is present for 2 different suburbs of Boston, i.e. suburb number 399 and 406.
+
+```{r}
+percentiles=sapply(names(Boston)[-which(names(Boston)=="medv")],
+function(var){ecdf(Boston[[var]])(lowest_suburb[[var]])*100})
+percentiles
+```
+
+We can see that for most of the variables, both the suburbs have similar quantiles. We also observe that both the suburbs have very high crime rates, nitrous oxide and tax, hence resulting in the low price of the house.
+
+### Question 4.
+Does any suburb of Boston stand out for having notably high crime rates, tax rates, or pupil–teacher ratios? Hint: Use a boxplot to detect any outliers. If so, identify the suburbs that show the outlier values.
+
+```{r}
+par(mfrow=c(1,3))
+boxplot(Boston$crim,main="Crime rate",ylab="crim",col="mediumaquamarine")
+boxplot(Boston$tax,main="Tax rate",ylab="tax",col="mediumaquamarine")
+boxplot(Boston$ptratio,main="Pupil-Teacher Ratio",ylab="ptratio",col="mediumaquamarine")
+```
+
+The suburb with the lowest median home value lies in the extreme upper percentiles for crime rate and tax rate, indicating very high crime and property taxes relative to most suburbs. Its pupil–teacher ratio is also above the 75th percentile, suggesting larger class sizes. Overall, these predictors take unusually unfavorable values, which helps explain the exceptionally low housing prices in this suburb.
+
+We do not need to find the outliers for the boxplot of tax because there are none.
+
+The outliers of crime rates are given below:
+
+```{r}
+boxplot.stats(Boston$crim)$out
+```
+
+The outliers of pupil-teacher ratio are given below:
+
+```{r}
+boxplot.stats(Boston$ptratio)$out
+```
+
