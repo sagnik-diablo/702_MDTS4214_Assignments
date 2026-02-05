@@ -1,0 +1,164 @@
+---
+title: "Problem Set 2: Linear Regression"
+author: "Sagnik Roy"
+date: "05-02-2026"
+output: html_document
+---
+
+## Problem 1  
+### To demonstrate that the population regression line is fixed, but the least squares regression line varies
+
+Suppose the population regression line is given by \(Y = 2 + 3x,\) while the observed data are generated from the model \(y = 2 + 3x + \varepsilon.\)
+
+**Step 1:** For \(x\) in the range \((5, 10)\), graph the population regression line.
+
+**Step 2:** Generate \(x_i \ (i = 1,2,\ldots,n)\) from the uniform distribution \(x_i \sim \text{Uniform}(5,10),\) and generate \(\varepsilon_i \sim N(0,4^2).\)
+Hence compute \(y_i = 2 + 3x_i + \varepsilon_i, \quad i = 1,2,\ldots,n.\)
+
+**Step 3:** Based on the generated data \((x_i, y_i)\), obtain the least squares regression line.
+
+**Step 4:** Repeat Steps 2 and 3 five times. Plot the five least squares regression lines along with the population regression line obtained in Step 1.
+
+**Interpretation:** Comment on the variability of the least squares regression lines around the fixed population regression line.
+
+Take \(n = 50\) and set the seed as \(123\).
+
+### Solution
+
+```{r}
+rm(list=ls())
+set.seed(123)
+b0=c();b1=c()
+color=c("skyblue2", "dodgerblue2", "steelblue4", "blue1", "navy")
+x=seq(5,10,length.out=50);y=2+3*x
+plot(x,y,type="l",col="red",lwd=3,main="The regression functions",ylab="Values of Y",xlab="Values of X")
+for(i in 1:5){
+xi=runif(50,5,10);ei=rnorm(50,0,4)
+yi=2+3*xi+ei
+model=lm(yi~xi)
+summary(model)
+b0=c(b0,as.data.frame(model$coefficients)[1,1])
+b1=c(b1,as.data.frame(model$coefficients)[2,1])
+lines(xi,predict(model),type="l",col=color[i],lwd=2)}
+legend("topleft",legend=c("PRF","SRF1","SRF2","SRF3","SRF4","SRF5"),fill=c("red",color))
+coefs=data.frame("Function"=c("SRF1","SRF2","SRF3","SRF4","SRF5"),"B0"=b0,"B1"=b1);coefs
+```
+
+#### Interpretation
+Although the population regression line is fixed, the least squares regression line varies from sample to sample due to random error.
+
+---
+
+## Problem 2  
+### To demonstrate that \(\hat{\beta}_0\) and \(\hat{\beta}\) minimise RSS
+
+**Step 1:** Generate \(x_i \sim \text{Uniform}(5,10),\) and mean-centre the values of \(x_i\). Generate \(\varepsilon_i \sim N(0,1).\) Compute \(y_i = 2 + 3x_i + \varepsilon_i, \quad i = 1,2,\ldots,n.\)
+
+Take \(n = 50\) and set the seed as \(123\).
+
+**Step 2:** Assume a linear regression model of the form \(y_i = \beta_0 + \beta x_i + \varepsilon_i.\) Using only the observed data \((x_i, y_i)\), obtain the least squares estimates of \(\beta_0\) and \(\beta\).
+
+**Step 3:** Consider a large grid of values for \((\beta_0, \beta)\) that includes the least squares estimates obtained above. For each combination, compute the residual sum of squares \(RSS = \sum_{i=1}^n (y_i - \beta_0 - \beta x_i)^2.\) Identify the values of \((\beta_0, \beta)\) for which the RSS is minimised.
+
+### Solution
+
+```{r}
+rm(list=ls())
+set.seed(123)
+xi=runif(50,5,10)
+xi=xi-mean(xi)
+ei=rnorm(50,0,1)
+yi=2+3*xi+ei
+model=lm(yi~xi)
+summary(model)
+b0=(as.data.frame(model$coefficients)[1,1])
+b1=(as.data.frame(model$coefficients)[2,1])
+rss=sum((yi-(b0+b1*xi))^2)
+b0
+b1
+rss
+r=c()
+a=seq(b0-1,b0+1,0.05)
+b=seq(b1-1,b1+1,0.05)
+for(i in 1:length(a)){
+  r=c(r,sum((yi-(a[i]+b[i]*xi))^2))}
+d=data.frame("B0"=a,"B1"=b,"RSS"=r);d
+d[which(r==min(r)),]
+```
+
+We observe that the RSS is minimised at the least squares estimates of \(\beta_0\) and \(\beta\).
+
+---
+
+## Problem 3  
+### To demonstrate that least squares estimators are unbiased
+
+**Step 1:** Generate \(x_i \sim \text{Uniform}(0,1), \quad \varepsilon_i \sim N(0,1),\) and compute \(y_i = \beta_0 + \beta x_i + \varepsilon_i,\) where \(\beta_0 = 2\) and \(\beta = 3\).
+
+**Step 2:** Based on the generated data \((x_i, y_i)\), obtain the least squares estimates \(\hat{\beta}_0\) and \(\hat{\beta}\).
+
+Repeat Steps 1 and 2 for \(R = 1000\) simulations.  
+The final estimates are given by the averages of the simulated values of \(\hat{\beta}_0\) and \(\hat{\beta}\).
+
+Compare these averages with the true values \(\beta_0\) and \(\beta\), and comment.
+
+Take \(n = 50\) and set the seed as \(123\).
+
+### Solution
+
+```{r}
+rm(list=ls())
+set.seed(123)
+BE0=c();BE1=c()
+for(i in 1:1000){
+xi=runif(50,5,10)
+xi=xi-mean(xi)
+ei=rnorm(50,0,1)
+yi=2+3*xi+ei
+model=lm(yi~xi)
+BE0=c(BE0,(as.data.frame(model$coefficients)[1,1]))
+BE1=c(BE1,(as.data.frame(model$coefficients)[2,1]))}
+mean(BE0) #estimate of beta0
+mean(BE1) #estimate of beta1
+```
+
+#### Comment
+The average of the estimated coefficients is close to the true parameter values 
+\(\beta_0 = 2\) and \(\beta = 3\), demonstrating unbiasedness.
+
+---
+
+## Problem 4  
+### Comparing several simple linear regression models
+
+Attach the **Boston** dataset from the **MASS** library in R. Let the median value of owner-occupied homes be the response variable.Consider the following predictors:
+
+* Per capita crime rate
+* Nitrogen oxides concentration
+* Proportion of blacks
+* Percentage of lower status population
+
+**(a)** Fit four separate simple linear regression models by selecting one predictor at a time. Present the outputs in a single table.
+
+**(b)** Identify the model that provides the best fit.
+
+**(c)** Compare the estimated coefficients across models and comment on the usefulness of the predictors.
+
+### Solution
+
+```{r,warning=FALSE,message=FALSE}
+rm(list=ls())
+library(stargazer)
+library(MASS)
+attach(Boston)
+v=c(14,1,5,12,13)
+d=Boston[,v]
+m1=lm(medv~crim,data=Boston);m2=lm(medv~nox,data=Boston)
+m3=lm(medv~black,data=Boston);m4=lm(medv~lstat,data=Boston)
+stargazer(m1,m2,m3,m4,type="text")
+```
+
+#### Comments
+Here model 4, where medv is explained by lstat, has the highest $R^2$ value, 0.544 .
+
+The coefficients indicate the direction and strength of the relationship between the response and each predictor. Among these, {lstat} shows the strongest association with {medv}.
