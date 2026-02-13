@@ -1,0 +1,137 @@
+---
+title: "PS 3 Multiple Linear Regression"
+author: "Sagnik Roy"
+date: "2026-02-12"
+output: word_document
+---
+
+## Question 2
+
+### Problem to demonstrate the role of qualitative (nominal) predictors in addition to quantitative predictors in multiple linear regression
+
+#### Attach “Credits” data from R. Regress “balance” on
+
+```{r,message=FALSE,warning=FALSE}
+rm(list=ls())
+library(stargazer)
+library("ISLR")
+attach(Credit)
+data=Credit
+head(data)
+```
+
+
+#### **(a)** “gender” only.
+
+```{r}
+fit1=lm(Balance~Gender)
+summary(fit1)
+```
+
+
+#### **(b)** “gender” and “ethnicity” .
+
+```{r}
+fit2=lm(Balance~Ethnicity+Gender)
+summary(fit2)
+```
+
+
+#### **(c)** “gender”, “ethnicity”, “income”.
+
+```{r}
+fit3=lm(Balance~Ethnicity+Gender+Income)
+summary(fit3)
+```
+
+
+#### **(d)** Output all the regressions in (a)-(c) in a single table using stargazer. Comment on the significant coefficients in each of the models.
+
+```{r}
+stargazer(fit1,fit2,fit3,type="text")
+```
+
+Model a shows that gender (male) is a significant predictor, suggesting that males tend to have higher balances than females, whereas Model b indicates that ethnicity (African and Asian) has significant coefficients reflecting balance differences across ethnic groups while gender (male) becomes only marginally significant; in Model c, income emerges as highly significant and dominates the model, causing the previously observed effects of gender and ethnicity to lose their statistical significance once income is taken into account.
+
+
+#### **(e)** Explain how gender affects “balance” in each of the models (a)- (c) .
+
+
+Model a suggests that gender on its own appears significant, with males having higher average credit card balances than females, while Model b shows that after adding ethnicity, the gender effect still persists but is weaker, indicating that some of the balance differences are explained by variation across ethnic groups; in Model c, once income is included, the gender effect becomes insignificant, revealing that the earlier observed gender difference was largely driven by income disparities rather than gender itself.
+
+
+#### **(f)** Compare the average credit card balance of a male African with a male Caucasian on the basis of model (b).
+
+
+Based on model (b), the predicted average credit card balance for a male Caucasian is $12.65 less than that for a male African American.
+
+
+#### **(g)** Compare the average credit card balance of a male African with a male Caucasian when each earns 100,000 dollars. For comparison, use the model in (c).
+
+
+At an income of 100,000 dollars , the predicted average credit card balance for a male Caucasian is 6.45 dollars higher than that for a male African American.
+
+
+#### **(h)** Compare and comment on the answers in (f) and (g)
+
+
+In Model (b), Caucasians appear to have a slightly lower balance than African Americans (–12.65), but in Model (c), after adjusting for income, the relationship reverses and Caucasians show a slightly higher balance (+6.45).
+
+
+#### **(i)** Based on the model in (c), predict the credit card balance of a female Asian whose income is 2000,000 dollars.
+
+
+According to Model (c), a female Asian with an income of 2,000,000 dollars is predicted to have a credit card balance of $12,110,096.0059 dollars.
+
+
+#### **(j)** Check the goodness of fit of the different models in (a) -(c) in terms of AIC,BIC and adjusted $R^2$. Which model would you prefer?
+
+
+From the 3 models we can see that model c has the highest adjusted $R^2$ value, hence we will prefer to use model c.
+
+
+
+### Question 4
+
+#### Problem to demonstrate the impact of ignoring interaction term in multiple linear regression. Consider a simulation setting where the data is generated as follows:
+
+#### **Step 1**: Generate x1i from Normal(0,1) distribution, i = 1, 2, .., n
+
+#### **Step 2**: Generate x2i from Bernoulli (0.3) distribution, i = 1, 2, .., n
+
+#### **Step 3**: Generate ϵi from Normal(0,1) and hence generate the response
+
+\[
+y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \beta_3 (x_{1i} \times x_{2i}) + \epsilon_i, \quad i = 1,2,\ldots,n
+\]
+
+#### **Step 4**: Run two separate multiple linear regressions (i) using the model in Step 3 and (ii) using the model in Step 3 without the interaction term.Repeat Steps 1-4 , R = 1000 times. At each simulation compute the MSE for the correct model (i.e. model with the interaction term) and the naive model(i.e. the model without the interaction term). Finally find the average MSE’sfor each model. From the output, demonstrate the impact of ignoring the interaction term.Carry out the analysis for n = 100 and the following parametric configurations:
+
+\[
+(\beta_0, \beta_1, \beta_2, \beta_3) = (-2.5, \; 1.2, \; 2.3, \; 0.001), \quad (-2.5, \; 1.2, \; 2.3, \; 3.1)
+\]
+
+#### Set seed as 123.
+```{r}
+rm(list=ls())
+set.seed(123)
+mse=function(b3){
+  n=100
+  mse.c=c();mse.n=c()
+  for(i in 1:1000){
+    x1=rnorm(n)
+    x2=rbinom(n,1,0.3)
+    e=rnorm(n)
+    y=-2.5+(1.2*x1)+(2.3*x2)+b3*(x1*x2)+e
+    fit1=lm(y~x1+x2+x1*x2)
+    fit2=lm(y~x1+x2)
+    mse.c[i]=mean((y-predict(fit1))^2)
+    mse.n[i]=mean((y-predict(fit2))^2)}
+  c(mse_correct=mean(mse.c),mse_naive=mean(mse.n))}
+b3_1=c(0.001)
+mse(b3_1)
+b3_2=c(3.1)
+mse(b3_2)
+```
+
+When the interaction effect is very small ,\(\beta_3 = 0.001\), the average MSE of the correctly specified model and the naive model are nearly identical, indicating that ignoring a negligible interaction term has little impact on prediction accuracy; however, when the interaction effect is large ,\(\beta_3= 3.1\), the naive model without the interaction yields a much higher average MSE than the correct model, demonstrating model misspecification and weaker predictive performance, and therefore omitting an important interaction term in multiple linear regression leads to biased estimates and increased prediction error.
