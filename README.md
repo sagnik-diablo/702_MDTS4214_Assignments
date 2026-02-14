@@ -1,2 +1,3 @@
-house-prices.zip is the file with the dataset i want to work with in fututre.
-The assignment for problem set 1 of predictive analysis is named as 702_PA (both the rmd and the pdf of the same file have been uploaded)
+Assignment 1: 702_PA_Assignment.pdf AND 702_PA_PS1.Rmd  
+Assignment 2: PS2_702.pdf AND PS2_702.Rmd  
+Assignment 3: PS3_702.pdf AND PS3_702.Rmd  
