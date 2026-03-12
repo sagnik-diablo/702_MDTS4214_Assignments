@@ -1,0 +1,157 @@
+---
+title: "702 PS-5"
+author: "Sagnik Roy"
+date: "2026-02-25"
+output: word_document
+---
+
+## Problem Set - 3
+
+### 3. Problem to demonstrate the role of qualitative (ordinal) predictors in addition to quantitative predictors in multiple linear regression
+
+Consider “diamonds” data set in R. It is in the ggplot2 package. Make a list of all the ordinal categorical variables. Identify the response.
+
+#### (a) Run a linear regression of the response on the quality of cut. Write the fitted regression model.
+
+```{r,message=FALSE,warning=FALSE}
+library(ggplot2)
+str(diamonds)
+grade=as.numeric(diamonds$cut)
+f=function(x){
+  if(x-5==0){return(c(0,0,0,0))
+  }else if(x-5==-1){return(c(1,0,0,0))
+  }else if(x-5==-2){return(c(1,1,0,0))
+  }else if(x-5==-3){return(c(1,1,1,0))    
+  }else{return(c(1,1,1,1))}}
+p=t(sapply(grade,f))
+colnames(p)=c("Premium","VGood","Good","Fair")
+diamonds=cbind(diamonds,p)
+summary(lm(price~Premium+VGood+Good+Fair,data=diamonds))
+```
+
+#### (b) Test whether the expected price of diamond with premium cut is significantly different from that of the ideal cut.
+
+We will perform the following test:
+
+$H_0: \beta_{\text{Premium}} - \beta_{\text{Ideal}} = 0$
+***ag***
+$H_1: \beta_{\text{Premium}} - \beta_{\text{Ideal}} \neq 0$
+
+The test statistic under $H_0$ is given as: 
+
+$t = \frac{\hat{\beta}_{\text{Premium}}}{SE(\hat{\beta}_{\text{Premium}})}$
+
+The p-value we observe for the test is negligible (almost equal to 0 << $\alpha = 0.05$). Therefore, we conclude that there is a statistically significant difference between the two levels.
+
+#### (c) What is the expected price of a diamond of ideal cut? 
+
+The expected price of a diamond of ideal cut is $3457.54.
+
+#### (d) Modify the regression model in (a) by incorporating the predictor “table”. Write the fitted regression model.
+
+```{r}
+summary(lm(price~Premium+VGood+Good+Fair+table,data=diamonds))
+```
+
+#### (e) Test for the significance of “table” in predicting the price of diamond.
+
+For this we will be performing the student's t test.
+
+We will perform the following test:
+
+$H_0: \beta_{table} = 0$
+***ag***
+$H_1: \beta_{table} \neq 0$
+
+The test statistic under $H_0$ is given as: 
+
+t = $\frac{\hat\beta_{table}}{SE(\beta_{table})}$
+
+The p-value we observe for the test is negligible (almost equal to 0 << $\alpha = 0.05$). Therefore, we conclude that table is a statistically significant predictor.
+
+#### (f) Find the average estimated price of a diamond with an average table value and which is of fair cut.
+
+The average estimated price of a diamond with an average table value and which is of fair cut is $4092.76
+
+---
+
+## Problem Set - 5
+
+### 1. Problem to demonstrate the utility of K nearest neighbour regression over least squares regression.
+
+Consider a setting with n = 1000 observations. Generate:
+
+ (i) $x_{1i}$ from $N(0, 2^2)$ and $x_{2i}$ from $Poisson(λ = 1.5)$.
+ 
+ (ii) $ε_i$ from $N(0, 1)$.
+ 
+ (iii) $yi = −2 + 1.4x_{1i} − 2.6x_{2i} + ε_i$
+ 
+We are using the seed as 123.
+
+Split the data into train and test sets. Keep the first 800 observations as training data and the remaining as test data. Work out the following:
+
+```{r}
+set.seed(123)
+n=1000
+x1=rnorm(n,0,2);x2=rpois(n,1.5);e=rnorm(n)
+y=-2+1.4*x1-2.6*x2+e
+d=data.frame(y,x1,x2)
+head(d)
+gg=c(1:800)
+train=d[gg,];test=d[-gg,]
+```
+
+#### 1. Fit a multiple linear regression equation of y on x1 and x2. Calculate test MSE.
+
+```{r}
+m1=lm(y~x1+x2,data=train)
+summary(m1)
+yhat=predict(m1,newdata=test)
+test.mse=mean((yhat-test[,1])^2)
+test.mse
+```
+
+#### 2. Fit a KNN model with k = 1, 2, 5, 9, 15. Calculate test MSE for each choice of k.
+
+```{r,message=FALSE,warning=FALSE}
+library(ggplot2)
+library(lattice)
+library(caret)
+mseks=c()
+ks=c(1,2,5,9,15)
+for(i in 1:5)
+{kreg=knnreg(y~x1+x2,data=train,k=ks[i])
+ ykreg=predict(kreg,test)
+ mseks[i]=mean((test$y-ykreg)^2)}
+output=data.frame(ks,mseks,rep(test.mse,each=5))
+colnames(output)=c("Choices of k","Test MSE under KNN","Test MSE under Multiple Linear Reg")
+output
+```
+
+Now we will be considering the function:
+
+$y_i = \frac{1}{(−2 + 1.4x_{1i} − 2.6x_{2i} + 2.9 x^2_{1i})} + 3.1sin{x_{2i}} - 1.5x_{1i}x^2_{2i} + ε_i$
+
+Work out the problems in (1) and (2). Compare and comment on the results.
+
+```{r}
+y1=1/(-2+1.4*x1-2.6*x2+2.9*(x1^2))+3.1*sin(x2)-1.5*x1*(x2^2)+e
+d1=data.frame(y1,x1,x2)
+head(d1)
+train1=d1[gg,];test1=d1[-gg,]
+m2=lm(y1~x1+x2,data=train1)
+summary(m2)
+y1test=predict(m2,newdata=test1)
+testmse1=mean((y1test-test1[,1])^2);testmse1
+msek1=c()
+for(i in 1:5)
+{kr1=knnreg(y1~x1+x2,data=train1,k=ks[i])
+ y1_knn=predict(kr1,test1)
+ msek1[i]=mean((test1[,1]-y1_knn)^2)}
+output2=data.frame(ks,msek1,rep(testmse1,each=5))
+colnames(output2)=c("Choices of k","Test MSE under KNN","Test MSE under Multiple Linear Reg")
+output2
+```
+
+From the above comparison, we observe that the KNN method performs significantly better than multiple linear regression, as it produces a much lower test mean squared error. This is because KNN can capture non-linear relationships, whereas multiple linear regression assumes linearity and therefore performs poorly in this case. Although the minimum MSE occurs when k=1, the increase in MSE for larger values of k is relatively small, suggesting that choosing a moderately large value of k would still be appropriate.
