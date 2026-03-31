@@ -1,0 +1,135 @@
+---
+title: "PROBLEM SET 7"
+author: "Sagnik Roy"
+date: "2026-03-20"
+output: word_document
+---
+### Problem Set 7: Shrinkage Methods
+
+#### 1. Split the data set into a training set and a test set randomly keeping 100 observations in test set and remaining in the training set.
+
+```{r,message=F}
+library(glmnet)
+library(ISLR)
+Hitters=na.omit(Hitters)
+set.seed(123)
+t=sample(1:nrow(Hitters),100)
+test=Hitters[t,]
+train=Hitters[-t,]
+```
+
+#### 2. Train the model using least squares and report the train MSE and test MSE.
+
+```{r}
+lm=lm(Salary ~.,data=train)
+yhat=predict(lm,newdata=train)
+ytest=predict(lm,newdata=test)
+train_mse=mean((train$Salary-yhat)^2);train_mse
+test_mse=mean((test$Salary-ytest)^2);test_mse
+```
+
+#### 3. Fit ridge regression models on the training set, with grid values of λ. Report the following:
+
+```{r}
+lgrid=10^seq(5,-2,length=100)
+x_train=model.matrix(Salary~.,train)[,-1]
+x_test=model.matrix(Salary~.,test)[,-1]
+rmodel=glmnet(x_train,train$Salary,alpha=0,lambda=lgrid)
+```
+
+(i) the dimension of the coefficient matrix so obtained.
+
+```{r}
+dim(coef(rmodel))
+```
+
+(ii) The $l_2$ norm of the regression coefficients corresponding to the 50th and 60th choice of $\lambda$. Comment on the output.
+
+```{r}
+sqrt(sum((coef(rmodel)[-1,50])^2))# l2 norm of 50th lambda
+sqrt(sum((coef(rmodel)[-1,60])^2))# l2 norm of 60th lambda
+```
+
+(iv). Test MSE corresponding to these two choices of $\lambda$.
+
+```{r}
+rpred50=predict(rmodel,s=lgrid[50],newx=x_test)
+rpred60=predict(rmodel,s=lgrid[60],newx=x_test)
+mean((test$Salary-rpred50)^2)# Test MSE for 50th lambda
+mean((test$Salary-rpred60)^2)# Test MSE for the 60th lambda
+```
+
+#### 4. Make a line plot (for all the predictors) of the standardized coefficients against the grid value of λ chosen by you. Interpret the graph.
+
+```{r}
+plot(rmodel)
+```
+
+*Interpretation:* 
+
+In this plot, the x-axis represents the values of $-log(\lambda)$, while each curve corresponds to a coefficient and shows how it changes with $-log(\lambda)$. Since an increase in $\lambda$ leads to a decrease in $-log(\lambda)$, we observe that as $\lambda$ increases, the coefficients progressively shrink toward zero.
+
+#### 5. How would the graph in (4) change if instead of $\lambda$ you plot on the x axis the ratio of $l_2$ norm of the ridge regression coefficient to the least square regression coefficient.
+
+```{r}
+l2norm=function(p){
+  sqrt(sum(p^2))}
+beta_ols=coef(lm)[-1]
+rcoefs=as.matrix(coef(rmodel))[-1,]
+rnorms=apply(rcoefs,2,l2norm)
+onorm=l2norm(beta_ols)
+matplot(rnorms/onorm,t(rcoefs),type="l",lty=1,xlab="Ratio",ylab="Coefficients",main = "Ridge vs Least Square Ratio")
+```
+
+#### 6. Run the Ridge regression on training data by choosing $\lambda$ by cross-validation. Find the test MSE for the optimal choice of $\lambda$ obtained using cross-validation.
+
+```{r}
+set.seed(123)
+cvridge=cv.glmnet(x_train,train$Salary,alpha=0);cvridge
+lridge=cvridge$lambda.min;lridge #Optimum Lambda for Ridge Model
+ridgecvpred=predict(cvridge,"lambda.min",newx=x_test)
+ridgecoef=coef(cvridge,"lambda.min")
+mseridgecv=mean((test$Salary-ridgecvpred)^2)
+nonzero=sum(ifelse(ridgecoef[-1]!=0,1,0))
+list(Ridge_Test_MSE=mseridgecv,Nonzero_Coefficients=nonzero)
+```
+
+#### 7. Fit a LASSO model on the training set, with $\lambda$ chosen by cross-validation. Report the test MSE, along with the number of non-zero coefficient estimates.
+
+```{r}
+set.seed(123)
+cvlasso=cv.glmnet(x_train,train$Salary,alpha=1);cvlasso
+llasso=cvlasso$lambda.min #Optimum Lambda for LASSO Model
+lassocvpred=predict(cvlasso,"lambda.min",newx=x_test)
+lassocoef=coef(cvlasso,"lambda.min")
+mselassocv=mean((test$Salary-lassocvpred)^2)
+nonzero=sum(ifelse(lassocoef[-1]!=0,1,0))
+list(Lasso_Test_MSE=mselassocv,Nonzero_Coefficients=nonzero)
+```
+
+#### 8. Fit an Elastic Net model on the training set, with $\lambda_1$ and $\lambda_2$ chosen by cross-validation. Report the test MSE. Also report the predictors with non-zero coefficients.
+
+```{r}
+set.seed(123)
+a=seq(0,1,by = 0.1)
+cverrors=c()
+models=vector("list")
+for(i in 1:length(a)){
+  models[[i]]=cv.glmnet(x_train,train$Salary,alpha=a[i])
+  cverrors[i]=min(models[[i]]$cvm)}
+best=which.min(cverrors)
+bestalpha=a[best]
+bestmodel=models[[best]]
+lambdaelastic=bestmodel$lambda.min;lambdaelastic #Optimum Lambda for Elastic Net Model
+predelastic=predict(bestmodel,"lambda.min",newx=x_test)
+mseelastic=mean((test$Salary-predelastic)^2)
+coefelastic=coef(bestmodel,"lambda.min")
+nzvars=rownames(coefelastic)[coefelastic[,1]!= 0][-1]
+list(Elastic_Test_MSE=mseelastic,Non_Zero_Predictors=nzvars)
+```
+
+#### 9. Compare the test MSE ’s of least squares regression, Ridge regression, LASSO and ELASTIC NET and comment on how accurately we can predict the Salary of a baseball player.
+
+The comparison of test MSE values shows that the Least Squares (OLS) model achieves the lowest error (87803.91), indicating the best predictive performance among all methods. Among the regularization techniques, Elastic Net performs relatively better (91957.09) compared to Ridge (93690.09) and LASSO (93914.89). While LASSO and Elastic Net tend to produce more parsimonious models by shrinking coefficients and effectively reducing the number of predictors, thereby improving interpretability, they do so at the cost of slightly higher prediction error. Hence, OLS is preferable when the primary objective is accuracy, whereas regularization methods are more suitable when model simplicity and interpretability are also important considerations.
+
+---
