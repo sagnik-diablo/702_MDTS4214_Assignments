@@ -1,0 +1,91 @@
+---
+title: "PROBLEM SET 8"
+author: "Sagnik Roy"
+date: "2026-03-30"
+output: word_document
+---
+
+### Problem to demonstrate the fitting of a binary response variable using logistic regression
+
+#### a. Consider the Weekly data available in the ISLR package of R. Use the data from 1990 to 2008 as train data and the data on 2009-2010 as test data.
+
+```{r,message=F,warning=F}
+rm(list=ls())
+library(ISLR)
+library(caret)
+dir_bin=ifelse(Weekly$Direction=="Up",1,0)
+wk_data=cbind(Weekly[,-9],dir_bin)
+attach(wk_data)
+head(wk_data)
+str(wk_data)
+train_df=wk_data[Year<2009,]
+test_df=wk_data[Year>=2009,]
+```
+
+#### b. Using the training data, fit a logistic regression with Direction as the response and the five lag variables plus Volume as predictors. Are there any significant predictors? If not, which of the tests is reporting the least p value. Interpret the coefficient corresponding to that test.
+
+```{r,message=F,warning=F}
+model_full=glm(dir_bin~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data=train_df,family=binomial(link="logit"))
+summary(model_full)
+```
+
+The logistic regression results indicate that none of the predictors are statistically significant at the 5% level, as all p-values exceed 0.05. However, Lag2 has the smallest p-value, suggesting it is the most influential predictor in the model. Its positive coefficient implies that an increase in Lag2 leads to an increase in the log-odds, and hence the probability, of the market moving “Up”, indicating a positive association with the response.
+
+#### c. Estimate the odds of market going “up” at median values of the predictors.
+
+```{r,message=F,warning=F}
+med_vals=apply(train_df[,2:7],2,median);med_vals
+med_vals=data.frame(t(apply(train_df[,2:7],2,median)));med_vals
+logit_val=predict(model_full,newdata=med_vals)
+odds_val=exp(logit_val);odds_val
+table(test_df$dir_bin)#actual count of the directions
+```
+
+#### e. Using the fitted model and the predictor values from the test data, find an optimal cut point that minimizes TPR(1 − FPR). Report the confusion matrix corresponding to the optimal cut-point value. From the confusion matrix compute the test error rate.
+
+```{r,message=F,warning=F}
+prob_full=predict(model_full,newdata=test_df[,2:7],type="response")
+tpr_full=c()
+fpr_full=c()
+metric_full=c()
+for(i in 1:length(prob_full)){
+  pred_full=ifelse(prob_full<prob_full[i],0,1)
+  cm_full=confusionMatrix(as.factor(pred_full),as.factor(test_df$dir_bin))
+  tpr_full[i]=cm_full$byClass["Sensitivity"]
+  fpr_full[i]=1-cm_full$byClass["Specificity"]
+  metric_full[i]=tpr_full[i]*(1-fpr_full[i])}
+out_full=data.frame("Cut_Point"=prob_full,"TPR"=tpr_full,"FPR"=fpr_full,"Compare"=metric_full)
+head(out_full)
+out_full[which.max(out_full$Compare),]
+opt_cut_full=out_full[which.max(out_full$Compare),1]
+cat("The cutpoint for which TPR(1-FPR) is minimum:",opt_cut_full)
+pred_opt_full=ifelse(prob_full<opt_cut_full,0,1)
+cm_opt_full=confusionMatrix(as.factor(pred_opt_full),as.factor(test_df$dir_bin))
+cm_opt_full
+```
+
+#### f. Is there any change in the test error rate if we have worked with only the two predictors lag 1 and lag 2?
+
+```{r,message=F,warning=F}
+model_red=glm(dir_bin~Lag1+Lag2,data=train_df,family=binomial)
+prob_red=predict(model_red,newdata=test_df,type="response")
+tpr_red=c()
+fpr_red=c()
+metric_red=c()
+for(i in 1:length(prob_red)){
+  pred_red=ifelse(prob_red<prob_red[i],0,1)
+  cm_red=confusionMatrix(as.factor(pred_red),as.factor(test_df$dir_bin))
+  tpr_red[i]=cm_red$byClass["Sensitivity"]
+  fpr_red[i]=1-cm_red$byClass["Specificity"]
+  metric_red[i]=tpr_red[i]*(1-fpr_red[i])}
+out_red=data.frame("Cut_Point"=prob_red,"TPR"=tpr_red,"FPR"=fpr_red,"Compare"=metric_red)
+head(out_red)
+out_red[which.max(out_red$Compare),]
+opt_cut_red=out_red[which.max(out_red$Compare),1]
+cat("The cutpoint for which TPR(1-FPR) is minimum:",opt_cut_red)
+pred_opt_red=ifelse(prob_red<opt_cut_red,0,1)
+cm_opt_red=confusionMatrix(as.factor(pred_opt_red),as.factor(test_df$dir_bin))
+cm_opt_red
+```
+
+The reduced model, including only Lag1 and Lag2, yields a test error rate comparable to or lower than that of the full model. This suggests that the excluded variables do not significantly improve predictive performance. Hence, the reduced model is preferred due to its parsimony, as it achieves similar accuracy with fewer predictors.
